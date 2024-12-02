@@ -18,7 +18,7 @@ async def get_comic_data(session: ClientSession, comic_number: int) -> dict:
     response = await session.get(url)
     try:
         return await response.json()
-    except ClientResponseError as e:
+    except Exception as e:
         logger.error().exception("error", e).int("status_code", response.status).int("comic_number", comic_number).msg("Couldn't get data")
 
 
