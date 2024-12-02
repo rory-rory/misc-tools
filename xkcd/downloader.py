@@ -42,8 +42,8 @@ def output_dir(comic_data: dict) -> str:
 async def download_comic(session: ClientSession, comic_data: dict) -> None:
     """Use comic metadata to download a comic."""
     year = comic_data.get("year")
-    month = comic_data.get("month")
-    day = comic_data.get("day")
+    month = comic_data.get("month").zfill(2)
+    day = comic_data.get("day").zfill(2)
 
     # Clean up title
     safe_title = re.sub(r"/|\\|\:|\*|\?|\"|<|>|\|", "", comic_data.get("safe_title"))
