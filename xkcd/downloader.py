@@ -1,16 +1,20 @@
 import asyncio
+import os
 import re
+import sys
 from datetime import datetime
 
 import aiohttp
-import os
-
-from aiohttp import ClientSession, ClientResponseError
-from zlog import Logger
+from aiohttp import ClientSession
+from zlog import FormattedStream, JSONFormatter, Logger
 
 # Set some globals
 current_dir = os.path.dirname(os.path.realpath(__file__))
 logger = Logger()
+
+# Pretty print logs
+logger.formatted_streams = [FormattedStream(JSONFormatter(2), sys.stdout)]
+
 
 async def get_comic_data(session: ClientSession, comic_number: int) -> dict:
     """Get comic metadata."""
@@ -19,7 +23,9 @@ async def get_comic_data(session: ClientSession, comic_number: int) -> dict:
     try:
         return await response.json()
     except Exception as e:
-        logger.error().exception("error", e).int("status_code", response.status).int("comic_number", comic_number).msg("Couldn't get data")
+        logger.error().exception("error", e).int("status_code", response.status).int(
+            "comic_number", comic_number
+        ).msg("Couldn't get data")
 
 
 def output_dir(comic_data: dict) -> str:
@@ -33,7 +39,7 @@ def output_dir(comic_data: dict) -> str:
     return _output_dir
 
 
-async def download_comic(session:ClientSession, comic_data: dict) -> None:
+async def download_comic(session: ClientSession, comic_data: dict) -> None:
     """Use comic metadata to download a comic."""
     year = comic_data.get("year")
     month = comic_data.get("month")
@@ -62,7 +68,9 @@ async def download_comic(session:ClientSession, comic_data: dict) -> None:
             response = await session.get(img_url)
             file_content = await response.content.read()
         except Exception as e:
-            logger.error().exception("error", e).dict("comic_data", comic_data).msg("Couldn't save image.")
+            logger.error().exception("error", e).dict("comic_data", comic_data).msg(
+                "Couldn't save image."
+            )
             return
 
         # Write data to output file
@@ -70,10 +78,11 @@ async def download_comic(session:ClientSession, comic_data: dict) -> None:
             f.write(file_content)
         return
 
+
 async def main():
     async with aiohttp.ClientSession() as session:
         # Initialise while loop
-        comic_date=datetime(2000,1,1)
+        comic_date = datetime(2000, 1, 1)
         comic_number = 1
 
         # Don't iterate forever...
@@ -86,16 +95,21 @@ async def main():
 
             # Start next iteration if metadata indicates non-comic comic
             if comic_data.get("extra_parts"):
-                logger.warn().dict("comic_data", comic_data).msg("Skipping non-comic comic...")
+                logger.warn().dict("comic_data", comic_data).msg(
+                    "Skipping non-comic comic..."
+                )
                 continue
 
             await download_comic(session, comic_data)
 
             # Loopy goodness
-            comic_date = datetime(year=int(comic_data.get("year")), month=int(comic_data.get("month")), day=int(comic_data.get("day")))
-            comic_number +=1
+            comic_date = datetime(
+                year=int(comic_data.get("year")),
+                month=int(comic_data.get("month")),
+                day=int(comic_data.get("day")),
+            )
+            comic_number += 1
 
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     asyncio.run(main())
